@@ -23,19 +23,11 @@ loop:
 halt:
     j    halt
 
-# uf8_decode:
-#     andi t0, a0, 0x0F       # mantissa = fl & 0x0F
-#     srli t1, a0, 4          # exponent = fl >> 4
-#     li   t2, 15
-#     sub  t2, t2, t1         # t2 = 15 - exponent
-#     li   t3, 0x7FFF
-#     srl  t3, t3, t2         # t3 = 0x7FFF >> (15 - e)
-#     slli t3, t3, 4          # offset = t3 << 4
-#     sll  t0, t0, t1         # (mantissa << exponent)
-#     add  a0, t0, t3         # return (mantissa<<e) + offset
-#     ret
-
-# a0 = ((m+16)<<e) - 16
+# by simplify the decode foumula
+# => (m ≪ e) + offset
+# => (m≪e) + ((2^e − 1)⋅16)
+# => (m≪e) + (16<<e) - 16
+# => ((m+16) << e) - 16 = a0
 uf8_decode:
     srli t0, a0, 4      # t0 = e
     andi a0, a0, 0x0F   # a0 = m
