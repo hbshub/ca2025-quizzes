@@ -1,10 +1,9 @@
 .data
 .text
-# .globl main
 main:
-    li a0, 0x00200000   # 測一組
+    li a0, 0x00200000   # test data
     jal ra, clz
-    # 結果在 a0，便於觀察/斷點
+    # result in a0
 halt:
     j halt
 # uint32_t clz(uint32_t x)
@@ -25,9 +24,19 @@ skip_update:
     bnez t1, clz_loop        # while (c) loop
     sub  a0, t0, a0          # return n - x
     ret
-
-uf8_decode:
     
+    # --- a0 = uf8 (低8位有效)；回傳 a0 = decode 值 ---
+uf8_decode:
+    andi t0, a0, 0x0F       # mantissa = fl & 0x0F
+    srli t1, a0, 4          # exponent = fl >> 4
+    li   t2, 15
+    sub  t2, t2, t1         # t2 = 15 - exponent
+    li   t3, 0x7FFF
+    srl  t3, t3, t2         # t3 = 0x7FFF >> (15 - e)
+    slli t3, t3, 4          # offset = t3 << 4
+    sll  t0, t0, t1         # (mantissa << exponent)
+    add  a0, t0, t3         # return (mantissa<<e) + offset
+    ret
     
 
 
