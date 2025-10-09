@@ -2,7 +2,7 @@
 test_in:
     # .byte 0x00, 0x10, 0x1F, 0x20, 0x2F, 0x7F, 0xF0, 0xFF
     # .word 0, 1, 15, 16, 17, 31, 32, 111
-    .word 17, 31, 32, 111
+    .word 10157920, 255, 495, 557040 
 test_out:
     # .byte 0,0,0,0,0,0,0,0
     .byte 0,0,0,0
@@ -49,35 +49,39 @@ uf8_encode:
     li t2, 0                # of = t2 = 0
 
     li t3, 5
-    blt t0, t3, fine_exa_exp         # if (msb >= 5) fine_exa_exp
+    blt t0, t3, find_exa_exp         # if (msb < 5) find_exa_exp
     addi t1, t0, -4               # exp = msb - 4
 
+    li t0, 0                    # t0 = cnt = 0
     li t3, 15
-    ble t1, t3, calc_exp     # if (exp > 15)
+    ble t1, t3, calc_exp        # if (exp < 15) calc_exp
     li t1, 15                   # exp = 15
 
-    li t3, 0                   # t3 = cnt = 0
 calc_exp:
-    bge t3, t1, adj_exp         # if (cnt >= exp) adj_exp
+    bge t0, t1, adj_exp         # if (cnt < exp) loop
     slli t2, t2, 1              # of = of << 1
     addi t2, t2, 16             # of = of + 16
-    addi t3, t3, 1              # cnt++
-
+    addi t0, t0, 1              # cnt++
+    jal x0, calc_exp
+    
 adj_exp:
-    ble t1, x0, fine_exa_exp        # if (exp <= 0) fine_exa_exp
-    bge a0, t2, fine_exa_exp        # if (a0 >= of) fine_exa_exp 
-    addi t2, t2, -16             # of = of - 16
-    srli t2, t2, 1               # of = of >> 1
-    addi t1, t1, -1              # exp--
+    ble t1, x0, find_exa_exp        # if (exp <= 0) find_exa_exp
+    bge a0, t2, find_exa_exp        # if (a0 >= of) find_exa_exp 
+    addi t2, t2, -16                # of = of - 16
+    srli t2, t2, 1                  # of = of >> 1
+    addi t1, t1, -1                 # exp--
+    jal x0, adj_exp
+    
 
-fine_exa_exp:
     li t3, 15
-    bge t1, t3, cmb_num         # if (exp >= 15)
+find_exa_exp:
+    bge t1, t3, cmb_num         # if (exp >= 15) cmb_num    
     slli t0, t2, 1              # t0 = of << 1
     addi t0, t0, 16             # t0 = (of << 1) + 16 = of_e+1
     blt a0, t0, cmb_num         # if (a0 >= of_e) cmb_num
     mv t2, t0                   # of = of_e
     addi t1, t1, 1              # exp++
+    jal x0, find_exa_exp
 
 cmb_num:
     sub t0, a0, t2              # t0 = value - of
