@@ -2,7 +2,7 @@
 test_in:
     # .byte 0x00, 0x10, 0x1F, 0x20, 0x2F, 0x7F, 0xF0, 0xFF
     # .word 0, 1, 15, 16, 17, 31, 32, 111
-    .word 10157920, 255, 495, 557040 
+    .word 1015792, 299, 495, 557040 
 test_out:
     # .byte 0,0,0,0,0,0,0,0
     .byte 0,0,0,0
@@ -31,8 +31,9 @@ halt:
 # return a0 - uf8 uf8_encode(value)
 uf8_encode:
     li t3, 16
-    blt a0, t3, e_0         # if (a0 < 16)
-
+    bge a0, t3, e_!0         # if (a0 >= 16) e_!0
+    ret
+e_!0:                        # e != 0 
     addi sp, sp, -8
     sw a0, 0(sp)          # store a0 in stack
     sw ra, 4(sp)          # store ra in stack  
@@ -53,7 +54,7 @@ uf8_encode:
     addi t1, t0, -4               # exp = msb - 4
 
     li t0, 0                    # t0 = cnt = 0
-    li t3, 15
+    li t3, 15                   # t3 = 15, cmp value
     ble t1, t3, calc_exp        # if (exp < 15) calc_exp
     li t1, 15                   # exp = 15
 
@@ -73,24 +74,26 @@ adj_exp:
     jal x0, adj_exp
     
 
-    li t3, 15
+    
 find_exa_exp:
-    bge t1, t3, cmb_num         # if (exp >= 15) cmb_num    
+    bge t1, t3, calc_m         # if (exp >= 15) calc_m    
     slli t0, t2, 1              # t0 = of << 1
     addi t0, t0, 16             # t0 = (of << 1) + 16 = of_e+1
-    blt a0, t0, cmb_num         # if (a0 >= of_e) cmb_num
+    blt a0, t0, calc_m         # if (a0 >= of_e) calc_m
     mv t2, t0                   # of = of_e
     addi t1, t1, 1              # exp++
     jal x0, find_exa_exp
 
-cmb_num:
+calc_m:
     sub t0, a0, t2              # t0 = value - of
-    srl t0, t0, t1             # t0 = (value - of) >> exp = manti
+    srl t0, t0, t1             # t0 = (value - of) >> exp = m
+    ble t0, t3, cmb_num        # if (m < 15) cmb_num
+    li t0, 15                   # m = 15
+cmb_num:    
     slli t1, t1, 4              # t1 = exp << 4
-    or  a0, t1, t0              # a0 = (exp << 4) | manti
+    or  a0, t1, t0              # a0 = (exp << 4) | m
     ret
-e_0:                        # e = 0
-    ret 
+
 # clz : count leading zeros
 # input : a0 - uint32_t x
 # return : a0 - uint32_t clz (x)
@@ -109,9 +112,3 @@ skip_update:
     bgtz t1, clz_loop        # while (c) loop
     sub  a0, t0, a0          # return n - x
     ret
-
-
-
-
-
-
